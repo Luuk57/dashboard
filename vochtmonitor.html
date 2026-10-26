@@ -69,6 +69,20 @@
         button:hover {
             background-color: #004fa3;
         }
+        .btn-secondary {
+            background-color: #28a745;
+        }
+        .btn-secondary:hover {
+            background-color: #218838;
+        }
+        .btn-edit {
+            background-color: #ffc107;
+            color: #333;
+            padding: 5px 10px;
+            font-size: 12px;
+            width: auto;
+            margin: 0;
+        }
         .back-link {
             display: block;
             text-align: center;
@@ -80,7 +94,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            font-size: 14px;
+            font-size: 13px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -91,6 +105,16 @@
             background-color: #0066cc;
             color: white;
         }
+        #bewerkModeBanner {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +122,13 @@
     <div class="container">
         <h2>💧 Gewicht, Vocht & UF Monitor</h2>
         
+        <div id="bewerkModeBanner">
+            Bewerkmodus actief (Rij wordt bijgewerkt) <button onclick="annuleerBewerken()" style="padding: 2px 5px; font-size: 12px; width: auto; background: #dc3545; margin-top:0;">Annuleer</button>
+        </div>
+
+        <input type="hidden" id="editRowIndex" value="">
+        <input type="hidden" id="oorspronkelijkeDatum" value="">
+
         <div class="form-group">
             <label for="dryWeight">Droog gewicht (kg):</label>
             <input type="number" step="0.1" id="dryWeight" oninput="slaDroogGewichtOp(); berekenAlles();">
@@ -121,28 +152,29 @@
             Echte UF (Pre - Nagewicht): <span id="echteUfOutput">0.0</span> kg
         </div>
 
-        <button onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
+        <button id="opslaanBtn" onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
 
         <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
     </div>
 
     <div class="container">
         <h3>📊 Geschiedenis & Overzicht</h3>
-        <button onclick="laadOverzicht()" style="background-color: #28a745; margin-top: 5px; margin-bottom: 15px; padding: 10px; font-size: 14px;">Gegevens ophalen uit Google Sheet</button>
+        <button onclick="laadOverzicht()" class="btn-secondary" style="margin-top: 5px; margin-bottom: 15px; padding: 10px; font-size: 14px;">Gegevens ophalen uit Google Sheet</button>
         <div style="overflow-x: auto;">
             <table id="overzichtTable">
                 <thead>
                     <tr>
-                        <th>Datum/Tijd</th>
+                        <th>Datum / Tijd</th>
                         <th>Droog</th>
                         <th>Pre</th>
                         <th>Advies</th>
                         <th>Na</th>
                         <th>Echte UF</th>
+                        <th>Actie</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="6">Klik op de knop hierboven om overzicht te laden.</td></tr>
+                    <tr><td colspan="7">Klik op de knop hierboven om overzicht te laden.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -150,12 +182,12 @@
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxudGZYXVLm1vN1Wj4BZydsJCiDnzaEBC0BedDQpkvgNfGrcAZ_vszquiO4byM29_wQ/exec";
+        let alleRijenData = [];
 
-        // Laad laatst opgeslagen drooggewicht bij opstarten (standaard 109 als er niets is)
         window.onload = function() {
             let opgeslagenDroog = localStorage.getItem('luuk_droog_gewicht') || "109";
             document.getElementById('dryWeight').value = opgeslagenDroog;
-            laadOverzicht(); // Laad direct het overzicht in
+            laadOverzicht();
         };
 
         function slaDroogGewichtOp() {
@@ -170,7 +202,6 @@
             let dry = parseFloat(document.getElementById('dryWeight').value) || 109;
             let post = parseFloat(document.getElementById('postWeight').value) || 0;
             
-            // 1. UF Advies berekening: pre weight - dry weight + 0.3
             let ufAdvies = pre > 0 ? (pre - dry + 0.3) : 0;
             if (ufAdvies < 0) ufAdvies = 0;
 
@@ -178,7 +209,6 @@
             let adviesBox = document.getElementById('ufAdviesBox');
             adviesSpan.innerText = ufAdvies.toFixed(2);
 
-            // Kleurcodering op basis van je wens voor UF-advies: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
             adviesBox.className = "result-box";
             if (ufAdvies >= 4.5) {
                 adviesBox.classList.add('uf-red');
@@ -188,7 +218,6 @@
                 adviesBox.classList.add('uf-green');
             }
 
-            // 2. Echte UF berekening: Pre-gewicht - Nagewicht
             let echteUf = (pre > 0 && post > 0) ? (pre - post) : 0;
             if (echteUf < 0) echteUf = 0;
             document.getElementById('echteUfOutput').innerText = echteUf.toFixed(2);
@@ -200,14 +229,25 @@
             let post = document.getElementById('postWeight').value;
             let advies = document.getElementById('ufAdviesOutput').innerText;
             let echteUf = document.getElementById('echteUfOutput').innerText;
+            let rowIndex = document.getElementById('editRowIndex').value;
+            let bestaandeDatum = document.getElementById('oorspronkelijkeDatum').value;
 
             if (!pre) {
                 alert("Vul ten minste het pre-gewicht in!");
                 return;
             }
 
+            // Maak een nette leesbare datum (bijv. 26-10-2026 19:45)
+            let nu = new Date();
+            let datumTijdStr = bestaandeDatum ? bestaandeDatum : 
+                String(nu.getDate()).padStart(2, '0') + '-' + 
+                String(nu.getMonth() + 1).padStart(2, '0') + '-' + 
+                nu.getFullYear() + ' ' + 
+                String(nu.getHours()).padStart(2, '0') + ':' + 
+                String(nu.getMinutes()).padStart(2, '0');
+
             let data = {
-                DatumTijd: new Date().toLocaleString(),
+                DatumTijd: datumTijdStr,
                 DroogGewicht: dry,
                 PreGewicht: pre,
                 UFAdvies: advies,
@@ -215,7 +255,11 @@
                 EchteUF: post ? echteUf : ""
             };
 
-            alert("Bezig met opslaan naar Google Sheet...");
+            if (rowIndex) {
+                data.rowIndex = rowIndex;
+            }
+
+            alert("Bezig met opslaan...");
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
@@ -224,11 +268,12 @@
                 body: JSON.stringify(data)
             })
             .then(() => {
-                alert("Gegevens succesvol opgeslagen!");
+                alert("Succesvol opgeslagen!");
+                annuleerBewerken();
                 document.getElementById('preWeight').value = "";
                 document.getElementById('postWeight').value = "";
                 berekenAlles();
-                setTimeout(laadOverzicht, 1500); // Vernieuw overzicht na 1.5 seconde
+                setTimeout(laadOverzicht, 1500);
             })
             .catch(error => {
                 console.error('Fout:', error);
@@ -241,21 +286,35 @@
             .then(response => response.json())
             .then(result => {
                 if (result.status === "success" && result.data.length > 0) {
+                    alleRijenData = result.data;
                     let tbody = document.getElementById('tableBody');
                     tbody.innerHTML = "";
                     
-                    // Laatste metingen bovenaan zetten
-                    let rows = result.data.reverse();
+                    let rows = [...result.data].reverse();
 
                     rows.forEach(row => {
+                        // Formateer eventuele oude ISO datums naar leesbaar formaat voor de weergave
+                        let schoneDatum = row.DatumTijd || '';
+                        if (schoneDatum.includes('T') && schoneDatum.endsWith('Z')) {
+                            let d = new Date(schoneDatum);
+                            if (!isNaN(d)) {
+                                schoneDatum = String(d.getDate()).padStart(2, '0') + '-' + 
+                                             String(d.getMonth() + 1).padStart(2, '0') + '-' + 
+                                             d.getFullYear() + ' ' + 
+                                             String(d.getHours()).padStart(2, '0') + ':' + 
+                                             String(d.getMinutes()).padStart(2, '0');
+                            }
+                        }
+
                         let tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td>${row.DatumTijd || ''}</td>
+                            <td>${schoneDatum}</td>
                             <td>${row.DroogGewicht || ''}</td>
                             <td>${row.PreGewicht || ''}</td>
                             <td>${row.UFAdvies || ''}</td>
                             <td>${row.Nagewicht || ''}</td>
                             <td>${row.EchteUF || ''}</td>
+                            <td><button class="btn-edit" onclick="laadRijVoorBewerking(${row.rowIndex})">Bewerk</button></td>
                         `;
                         tbody.appendChild(tr);
                     });
@@ -264,6 +323,33 @@
             .catch(err => {
                 console.error("Kon overzicht niet laden", err);
             });
+        }
+
+        function laadRijVoorBewerking(rowIndex) {
+            let rij = alleRijenData.find(r => r.rowIndex == rowIndex);
+            if (!rij) return;
+
+            document.getElementById('editRowIndex').value = rij.rowIndex;
+            document.getElementById('oorspronkelijkeDatum').value = rij.DatumTijd;
+            document.getElementById('dryWeight').value = rij.DroogGewicht || 109;
+            document.getElementById('preWeight').value = rij.PreGewicht || '';
+            document.getElementById('postWeight').value = rij.Nagewicht || '';
+
+            document.getElementById('bewerkModeBanner').style.display = 'block';
+            document.getElementById('opslaanBtn').innerText = "Wijzigingen Opslaan";
+            
+            berekenAlles();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function annuleerBewerken() {
+            document.getElementById('editRowIndex').value = "";
+            document.getElementById('oorspronkelijkeDatum').value = "";
+            document.getElementById('bewerkModeBanner').style.display = 'none';
+            document.getElementById('opslaanBtn').innerText = "Opslaan naar Google Sheet";
+            document.getElementById('preWeight').value = "";
+            document.getElementById('postWeight').value = "";
+            berekenAlles();
         }
     </script>
 
