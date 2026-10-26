@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuukData - Dialyse Countdown</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: #1e1e1e;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        h2 {
+            color: #bb86fc;
+            margin-top: 0;
+        }
+        .timer-display {
+            font-size: 48px;
+            font-weight: bold;
+            font-family: monospace;
+            color: #03dac6;
+            margin: 20px 0;
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 8px;
+            letter-spacing: 2px;
+        }
+        .status-text {
+            font-size: 16px;
+            color: #b0b0b0;
+            margin-bottom: 20px;
+        }
+        .info-box {
+            background: #2d2d2d;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 14px;
+            color: #e0e0e0;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            color: #bb86fc;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>⏱️ Dialyse Countdown</h2>
+        <div class="status-text" id="statusText">Bezig met berekenen...</div>
+        
+        <div class="timer-display" id="timerOutput">07:00:00</div>
+
+        <div class="info-box">
+            <strong>Instelling:</strong><br>
+            Loopt van <strong>22:30</strong> tot <strong>05:30</strong> de volgende ochtend (7 uur totaal).
+        </div>
+
+        <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
+    </div>
+
+    <script>
+        function updateCountdown() {
+            let now = new Date();
+            let hours = now.getHours();
+            let minutes = now.getMinutes();
+            let seconds = now.getSeconds();
+
+            let currentTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
+            
+            // 22:30 in seconden = 22 * 3600 + 30 * 60 = 81000 seconden
+            let startSeconds = 22 * 3600 + 30 * 60;
+            // 05:30 de volgende ochtend in seconden = 5 * 3600 + 30 * 60 = 19800 seconden
+            let endSeconds = 5 * 3600 + 30 * 60;
+
+            let targetTime = new Date(now);
+            let statusText = document.getElementById('statusText');
+            let timerOutput = document.getElementById('timerOutput');
+
+            // Bepaal of we binnen het venster zijn (22:30 tot 05:30)
+            // Dit loopt over de middernacht grens heen.
+            let isTijdensDialyse = false;
+            
+            if (currentTimeInSeconds >= startSeconds) {
+                // Tussen 22:30 en 23:59:59
+                targetTime.setDate(targetTime.getDate() + 1); // Eindigt de volgende ochtend om 05:30
+                targetTime.setHours(5, 30, 0, 0);
+                isTijdensDialyse = true;
+            } else if (currentTimeInSeconds < endSeconds) {
+                // Tussen 00:00:00 en 05:30
+                targetTime.setHours(5, 30, 0, 0);
+                isTijdensDialyse = true;
+            } else {
+                // Buiten de dialysetijd (tussen 05:30 en 22:30)
+                // Countdown tot de volgende start om 22:30
+                targetTime.setHours(22, 30, 0, 0);
+                isTijdensDialyse = false;
+            }
+
+            let diff = targetTime - now; // Verschil in milliseconden
+
+            if (diff <= 0) {
+                timerOutput.innerText = "00:00:00";
+                statusText.innerText = isTijdensDialyse ? "Dialytijd is afgelopen (05:30 bereikt)!" : "Klaar om te starten (22:30)!";
+                return;
+            }
+
+            let diffHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            let diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            let diffSeconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            let formattedTime = 
+                String(diffHours).padStart(2, '0') + ':' + 
+                String(diffMinutes).padStart(2, '0') + ':' + 
+                String(diffSeconds).padStart(2, '0');
+
+            timerOutput.innerText = formattedTime;
+
+            if (isTijdensDialyse) {
+                statusText.innerText = "Actieve Dialyse - Tijd tot einde (05:30):";
+                timerOutput.style.color = "#03dac6"; // Cyaan/Groenachtig tijdens dialyse
+            } else {
+                statusText.innerText = "Wachten op starttijd (22:30):";
+                timerOutput.style.color = "#bb86fc"; // Paars/Lichtblauwig daarbuiten
+            }
+        }
+
+        // Update elke seconde
+        setInterval(updateCountdown, 1000);
+        updateCountdown(); // Direct uitvoeren bij laden
+    </script>
+
+</body>
+</html>
