@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LuukData - Toedieningen</title>
+    <title>LuukData - Toedieningen & Extra's</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,22 +26,74 @@
             margin-top: 0;
         }
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
+            background: #fafafa;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #eee;
         }
         label {
             display: block;
             font-weight: bold;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
         }
-        input, select, textarea {
+        input[type="text"], textarea {
             width: 100%;
-            padding: 12px;
+            padding: 10px;
             box-sizing: border-box;
             border: 1px solid #ccc;
             border-radius: 6px;
             font-size: 16px;
         }
-        button {
+        .counter-box {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .counter-btn {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            font-size: 20px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .counter-btn:hover { background-color: #004fa3; }
+        .counter-value {
+            font-size: 18px;
+            font-weight: bold;
+            width: 30px;
+            text-align: center;
+        }
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            font-size: 16px;
+        }
+        .radio-group label {
+            font-weight: normal;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        select[multiple] {
+            width: 100%;
+            height: 110px;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+        button.main-btn {
             background-color: #28a745;
             color: white;
             border: none;
@@ -53,16 +105,16 @@
             cursor: pointer;
             margin-top: 15px;
         }
-        button:hover {
-            background-color: #218838;
-        }
+        button.main-btn:hover { background-color: #218838; }
         .btn-edit {
             background-color: #ffc107;
             color: #333;
             padding: 5px 10px;
             font-size: 12px;
             width: auto;
-            margin: 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
         .back-link {
             display: block;
@@ -82,10 +134,7 @@
             padding: 8px;
             text-align: center;
         }
-        th {
-            background-color: #28a745;
-            color: white;
-        }
+        th { background-color: #28a745; color: white; }
         #bewerkModeBanner {
             background-color: #fff3cd;
             color: #856404;
@@ -101,36 +150,84 @@
 <body>
 
     <div class="container">
-        <h2>💊 Toedieningen Beheer</h2>
+        <h2>💊 Toedieningen & Metingen</h2>
         
         <div id="bewerkModeBanner">
-            Bewerkmodus actief <button onclick="annuleerBewerken()" style="padding: 2px 5px; font-size: 12px; width: auto; background: #dc3545; margin-top:0;">Annuleer</button>
+            Bewerkmodus actief <button onclick="annuleerBewerken()" style="padding: 2px 5px; font-size: 12px; width: auto; background: #dc3545; margin-top:0; border:none; color:white; border-radius:4px;">Annuleer</button>
         </div>
 
         <input type="hidden" id="editRowIndex" value="">
         <input type="hidden" id="oorspronkelijkeDatum" value="">
 
+        <!-- Fragmin 2500 -->
         <div class="form-group">
-            <label for="typeToediening">Type toediening / Medicatie:</label>
-            <select id="typeToediening">
-                <option value="Zoutoplossing / NaCl">Zoutoplossing / NaCl</option>
-                <option value="Medicatie / Injectie">Medicatie / Injectie</option>
-                <option value="Spoeling">Spoeling</option>
-                <option value="Anders">Anders</option>
+            <div class="counter-box">
+                <label style="margin:0;">Fragmin 2500:</label>
+                <div class="counter-controls">
+                    <button type="button" class="counter-btn" onclick="wijzigTeller('fragmin2500', -1)">-</button>
+                    <span id="fragmin2500" class="counter-value">0</span>
+                    <button type="button" class="counter-btn" onclick="wijzigTeller('fragmin2500', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fragmin 5000 -->
+        <div class="form-group">
+            <div class="counter-box">
+                <label style="margin:0;">Fragmin 5000:</label>
+                <div class="counter-controls">
+                    <button type="button" class="counter-btn" onclick="wijzigTeller('fragmin5000', -1)">-</button>
+                    <span id="fragmin5000" class="counter-value">0</span>
+                    <button type="button" class="counter-btn" onclick="wijzigTeller('fragmin5000', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- IJzer J/N -->
+        <div class="form-group">
+            <label>IJzer:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="ijzer" value="Ja"> Ja</label>
+                <label><input type="radio" name="ijzer" value="Nee" checked> Nee</label>
+            </div>
+        </div>
+
+        <!-- Epo J/N -->
+        <div class="form-group">
+            <label>Epo:</label>
+            <div class="radio-group">
+                <label><input type="radio" name="epo" value="Ja"> Ja</label>
+                <label><input type="radio" name="epo" value="Nee" checked> Nee</label>
+            </div>
+        </div>
+
+        <!-- Shuntflowmeting J/N + 4-digit input -->
+        <div class="form-group">
+            <label>Shuntflowmeting:</label>
+            <div class="radio-group" style="margin-bottom: 10px;">
+                <label><input type="radio" name="shuntChoice" value="Ja" onclick="toggleShuntInput(true)"> Ja</label>
+                <label><input type="radio" name="shuntChoice" value="Nee" onclick="toggleShuntInput(false)" checked> Nee</label>
+            </div>
+            <div id="shuntInputContainer" style="display: none;">
+                <label for="shuntWaarde" style="font-size: 14px; font-weight: normal;">Waarde (max 4 cijfers):</label>
+                <input type="text" id="shuntWaarde" maxlength="4" placeholder="Bijv. 1250">
+            </div>
+        </div>
+
+        <!-- Multi-select Dropdown vanuit Google Sheet -->
+        <div class="form-group">
+            <label for="multiSelectOpties">Extra items / Selectie (Multi-select: houd Ctrl ingedrukt):</label>
+            <select id="multiSelectOpties" multiple>
+                <option value="" disabled>Laden vanuit Google Sheet...</option>
             </select>
         </div>
 
         <div class="form-group">
-            <label for="hoeveelheid">Hoeveelheid / Dosering:</label>
-            <input type="text" id="hoeveelheid" placeholder="Bijv. 100 ml of 2 tabletten">
-        </div>
-
-        <div class="form-group">
             <label for="opmerking">Opmerkingen:</label>
-            <textarea id="opmerking" rows="3" placeholder="Eventuele bijzonderheden..."></textarea>
+            <textarea id="opmerking" rows="2" placeholder="Bijzonderheden..."></textarea>
         </div>
 
-        <button id="opslaanBtn" onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
+        <button id="opslaanBtn" class="main-btn" onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
 
         <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
     </div>
@@ -143,14 +240,18 @@
                 <thead>
                     <tr>
                         <th>Datum / Tijd</th>
-                        <th>Type</th>
-                        <th>Hoeveelheid</th>
+                        <th>F2500</th>
+                        <th>F5000</th>
+                        <th>IJzer</th>
+                        <th>Epo</th>
+                        <th>Shunt</th>
+                        <th>Extra's</th>
                         <th>Opmerking</th>
                         <th>Actie</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody">
-                    <tr><td colspan="5">Klik op de knop hierboven om overzicht te laden.</td></tr>
+                    <tr><td colspan="9">Klik op de knop hierboven om overzicht te laden.</td></tr>
                 </tbody>
             </table>
         </div>
@@ -161,20 +262,60 @@
         let alleRijenData = [];
 
         window.onload = function() {
+            laadDropdownOpties();
             laadOverzicht();
         };
 
+        function wijzigTeller(id, delta) {
+            let el = document.getElementById(id);
+            let val = parseInt(el.innerText) + delta;
+            if (val < 0) val = 0;
+            el.innerText = val;
+        }
+
+        function toggleShuntInput(toon) {
+            document.getElementById('shuntInputContainer').style.display = toon ? 'block' : 'none';
+            if (!toon) document.getElementById('shuntWaarde').value = '';
+        }
+
+        function laadDropdownOpties() {
+            fetch(SCRIPT_URL + "?action=getOptions")
+            .then(res => res.json())
+            .then(result => {
+                let select = document.getElementById('multiSelectOpties');
+                select.innerHTML = "";
+                if (result.status === "success" && result.data.length > 0) {
+                    result.data.forEach(optie => {
+                        let opt = document.createElement('option');
+                        opt.value = optie;
+                        opt.innerText = optie;
+                        select.appendChild(opt);
+                    });
+                } else {
+                    select.innerHTML = '<option value="" disabled>Geen opties gevonden in tabblad "Opties"</option>';
+                }
+            })
+            .catch(err => {
+                console.error("Fout bij laden opties", err);
+            });
+        }
+
         function dataOpslaan() {
-            let type = document.getElementById('typeToediening').value;
-            let hoeveelheid = document.getElementById('hoeveelheid').value;
+            let f2500 = document.getElementById('fragmin2500').innerText;
+            let f5000 = document.getElementById('fragmin5000').innerText;
+            let ijzer = document.querySelector('input[name="ijzer"]:checked').value;
+            let epo = document.querySelector('input[name="epo"]:checked').value;
+            
+            let shuntKeuze = document.querySelector('input[name="shuntChoice"]:checked').value;
+            let shuntVal = shuntKeuze === "Ja" ? document.getElementById('shuntWaarde').value : "Nee";
+            
+            // Haal multi-select geselecteerde waarden op
+            let selectElement = document.getElementById('multiSelectOpties');
+            let geselecteerd = Array.from(selectElement.selectedOptions).map(opt => opt.value).join(', ');
+
             let opmerking = document.getElementById('opmerking').value;
             let rowIndex = document.getElementById('editRowIndex').value;
             let bestaandeDatum = document.getElementById('oorspronkelijkeDatum').value;
-
-            if (!hoeveelheid) {
-                alert("Vul de hoeveelheid of dosering in!");
-                return;
-            }
 
             let nu = new Date();
             let datumTijdStr = bestaandeDatum ? bestaandeDatum : 
@@ -187,8 +328,12 @@
             let data = {
                 sheetName: "Toedieningen",
                 DatumTijd: datumTijdStr,
-                Type: type,
-                Hoeveelheid: hoeveelheid,
+                Fragmin2500: f2500,
+                Fragmin5000: f5000,
+                IJzer: ijzer,
+                Epo: epo,
+                Shuntflow: shuntVal,
+                ExtraSelectie: geselecteerd,
                 Opmerking: opmerking
             };
 
@@ -207,8 +352,6 @@
             .then(() => {
                 alert("Succesvol opgeslagen!");
                 annuleerBewerken();
-                document.getElementById('hoeveelheid').value = "";
-                document.getElementById('opmerking').value = "";
                 setTimeout(laadOverzicht, 1500);
             })
             .catch(error => {
@@ -229,12 +372,15 @@
                     let rows = [...result.data].reverse();
 
                     rows.forEach(row => {
-                        let schoneDatum = row.DatumTijd || '';
                         let tr = document.createElement('tr');
                         tr.innerHTML = `
-                            <td>${schoneDatum}</td>
-                            <td>${row.Type || ''}</td>
-                            <td>${row.Hoeveelheid || ''}</td>
+                            <td>${row.DatumTijd || ''}</td>
+                            <td>${row.Fragmin2500 || 0}</td>
+                            <td>${row.Fragmin5000 || 0}</td>
+                            <td>${row.IJzer || ''}</td>
+                            <td>${row.Epo || ''}</td>
+                            <td>${row.Shuntflow || ''}</td>
+                            <td>${row.ExtraSelectie || ''}</td>
                             <td>${row.Opmerking || ''}</td>
                             <td><button class="btn-edit" onclick="laadRijVoorBewerking(${row.rowIndex})">Bewerk</button></td>
                         `;
@@ -253,10 +399,23 @@
 
             document.getElementById('editRowIndex').value = rij.rowIndex;
             document.getElementById('oorspronkelijkeDatum').value = rij.DatumTijd;
-            document.getElementById('typeToediening').value = rij.Type || 'Zoutoplossing / NaCl';
-            document.getElementById('hoeveelheid').value = rij.Hoeveelheid || '';
-            document.getElementById('opmerking').value = rij.Opmerking || '';
+            document.getElementById('fragmin2500').innerText = rij.Fragmin2500 || 0;
+            document.getElementById('fragmin5000').innerText = rij.Fragmin5000 || 0;
+            
+            document.querySelector(`input[name="ijzer"][value="${rij.IJzer || 'Nee'}"]`).checked = true;
+            document.querySelector(`input[name="epo"][value="${rij.Epo || 'Nee'}"]`).checked = true;
+            
+            if (rij.Shuntflow && rij.Shuntflow !== "Nee") {
+                document.querySelector('input[name="shuntChoice"][value="Ja"]').checked = true;
+                toggleShuntInput(true);
+                document.getElementById('shuntWaarde').value = rij.Shuntflow;
+            } else {
+                document.querySelector('input[name="shuntChoice"][value="Nee"]').checked = true;
+                toggleShuntInput(false);
+            }
 
+            document.getElementById('opmerking').value = rij.Opmerking || '';
+            
             document.getElementById('bewerkModeBanner').style.display = 'block';
             document.getElementById('opslaanBtn').innerText = "Wijzigingen Opslaan";
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -267,8 +426,10 @@
             document.getElementById('oorspronkelijkeDatum').value = "";
             document.getElementById('bewerkModeBanner').style.display = 'none';
             document.getElementById('opslaanBtn').innerText = "Opslaan naar Google Sheet";
-            document.getElementById('hoeveelheid').value = "";
+            document.getElementById('fragmin2500').innerText = "0";
+            document.getElementById('fragmin5000').innerText = "0";
             document.getElementById('opmerking').value = "";
+            toggleShuntInput(false);
         }
     </script>
 
