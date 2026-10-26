@@ -14,121 +14,248 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
         }
         .container {
             max-width: 500px;
             width: 100%;
             background: #1e1e1e;
-            padding: 25px;
+            padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-            text-align: center;
+            margin-top: 10px;
+            margin-bottom: 20px;
         }
-        h2 {
+        h2, h3 {
             color: #bb86fc;
             margin-top: 0;
+            text-align: center;
         }
         .timer-display {
-            font-size: 48px;
+            font-size: 42px;
             font-weight: bold;
             font-family: monospace;
             color: #03dac6;
-            margin: 20px 0;
+            margin: 15px 0;
             background: #2d2d2d;
             padding: 15px;
             border-radius: 8px;
             letter-spacing: 2px;
+            text-align: center;
         }
         .status-text {
             font-size: 16px;
             color: #b0b0b0;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            text-align: center;
         }
-        .info-box {
+        .settings-box {
             background: #2d2d2d;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 14px;
-            color: #e0e0e0;
-            margin-bottom: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
             text-align: left;
         }
+        .form-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            color: #ccc;
+            margin-bottom: 3px;
+        }
+        input[type="time"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            background: #3d3d3d;
+            border: 1px solid #555;
+            color: white;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #bb86fc;
+            color: #121212;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .btn:hover { background-color: #9965f4; }
+        .btn-secondary {
+            background-color: #03dac6;
+        }
+        .btn-secondary:hover { background-color: #02b3a2; }
         .back-link {
-            display: inline-block;
+            display: block;
+            text-align: center;
             margin-top: 15px;
             color: #bb86fc;
             text-decoration: none;
             font-weight: bold;
         }
-        .back-link:hover {
-            text-decoration: underline;
-        }
+        .back-link:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h2>⏱️ Dialyse Countdown</h2>
-        <div class="status-text" id="statusText">Bezig met berekenen...</div>
+        <div class="status-text" id="statusText">Laden...</div>
         
-        <div class="timer-display" id="timerOutput">07:00:00</div>
+        <div class="timer-display" id="timerOutput">00:00:00</div>
 
-        <div class="info-box">
-            <strong>Instelling:</strong><br>
-            Loopt van <strong>22:30</strong> tot <strong>05:30</strong> de volgende ochtend (7 uur totaal).
+        <!-- Schema Instellingen -->
+        <div class="settings-box">
+            <h3>⚙️ Tijden Schema</h3>
+            <div class="form-group">
+                <label for="startTime">Starttijd:</label>
+                <input type="time" id="startTime" value="22:30">
+            </div>
+            <div class="form-group">
+                <label for="endTime">Eindtijd (volgende ochtend):</label>
+                <input type="time" id="endTime" value="05:30">
+            </div>
+            <button class="btn" onclick="slaTijdenOp()">Schema Opslaan</button>
+        </div>
+
+        <!-- Handmatige Timer Instelling -->
+        <div class="settings-box">
+            <h3>🖐️ Handmatige Timer</h3>
+            <div class="form-group">
+                <label for="manualHours">Aantal uren handmatig:</label>
+                <input type="number" id="manualHours" min="0" max="12" value="7">
+            </div>
+            <div class="form-group">
+                <label for="manualMinutes">Aantal minuten handmatig:</label>
+                <input type="number" id="manualMinutes" min="0" max="59" value="0">
+            </div>
+            <button class="btn btn-secondary" onclick="startHandmatigeTimer()">Start Handmatige Timer</button>
+            <button class="btn" style="background-color: #cf6679; color:white; margin-top:5px;" onclick="resetHandmatigeTimer()">Terug naar Schema</button>
         </div>
 
         <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
     </div>
 
     <script>
-        function updateCountdown() {
-            let now = new Date();
-            let hours = now.getHours();
-            let minutes = now.getMinutes();
-            let seconds = now.getSeconds();
+        let handmatigEindTijd = null;
 
-            let currentTimeInSeconds = hours * 3600 + minutes * 60 + seconds;
-            
-            // 22:30 in seconden = 22 * 3600 + 30 * 60 = 81000 seconden
-            let startSeconds = 22 * 3600 + 30 * 60;
-            // 05:30 de volgende ochtend in seconden = 5 * 3600 + 30 * 60 = 19800 seconden
-            let endSeconds = 5 * 3600 + 30 * 60;
+        window.onload = function() {
+            let opgeslagenStart = localStorage.getItem('luuk_start_tijd');
+            let opgeslagenEind = localStorage.getItem('luuk_eind_tijd');
 
-            let targetTime = new Date(now);
-            let statusText = document.getElementById('statusText');
-            let timerOutput = document.getElementById('timerOutput');
+            if (opgeslagenStart) document.getElementById('startTime').value = opgeslagenStart;
+            if (opgeslagenEind) document.getElementById('endTime').value = opgeslagenEind;
 
-            // Bepaal of we binnen het venster zijn (22:30 tot 05:30)
-            // Dit loopt over de middernacht grens heen.
-            let isTijdensDialyse = false;
-            
-            if (currentTimeInSeconds >= startSeconds) {
-                // Tussen 22:30 en 23:59:59
-                targetTime.setDate(targetTime.getDate() + 1); // Eindigt de volgende ochtend om 05:30
-                targetTime.setHours(5, 30, 0, 0);
-                isTijdensDialyse = true;
-            } else if (currentTimeInSeconds < endSeconds) {
-                // Tussen 00:00:00 en 05:30
-                targetTime.setHours(5, 30, 0, 0);
-                isTijdensDialyse = true;
-            } else {
-                // Buiten de dialysetijd (tussen 05:30 en 22:30)
-                // Countdown tot de volgende start om 22:30
-                targetTime.setHours(22, 30, 0, 0);
-                isTijdensDialyse = false;
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        };
+
+        function slaTijdenOp() {
+            let start = document.getElementById('startTime').value;
+            let eind = document.getElementById('endTime').value;
+            if (start && eind) {
+                localStorage.setItem('luuk_start_tijd', start);
+                localStorage.setItem('luuk_eind_tijd', eind);
+                handmatigEindTijd = null; // Terug naar schema
+                alert("Schema opgeslagen!");
             }
+        }
 
-            let diff = targetTime - now; // Verschil in milliseconden
-
-            if (diff <= 0) {
-                timerOutput.innerText = "00:00:00";
-                statusText.innerText = isTijdensDialyse ? "Dialytijd is afgelopen (05:30 bereikt)!" : "Klaar om te starten (22:30)!";
+        function startHandmatigeTimer() {
+            let uren = parseInt(document.getElementById('manualHours').value) || 0;
+            let minuten = parseInt(document.getElementById('manualMinutes').value) || 0;
+            
+            let totaalMs = (uren * 3600 + minuten * 60) * 1000;
+            if (totaalMs <= 0) {
+                alert("Vul een geldig aantal uren of minuten in!");
                 return;
             }
 
+            handmatigEindTijd = new Date().getTime() + totaalMs;
+            alert("Handmatige timer gestart!");
+        }
+
+        function resetHandmatigeTimer() {
+            handmatigEindTijd = null;
+            alert("Teruggeschakeld naar het vaste schema.");
+        }
+
+        function updateCountdown() {
+            let now = new Date();
+            let statusText = document.getElementById('statusText');
+            let timerOutput = document.getElementById('timerOutput');
+            let targetTime = new Date(now);
+
+            // Als er een handmatige timer loopt
+            if (handmatigEindTijd) {
+                let diff = handmatigEindTijd - now.getTime();
+                if (diff <= 0) {
+                    timerOutput.innerText = "00:00:00";
+                    statusText.innerText = "Handmatige timer is afgelopen!";
+                    return;
+                }
+                formatteerEnToon(diff, "Handmatige Countdown:", timerOutput, statusText);
+                return;
+            }
+
+            // Anders via het schema (Start- en Eindtijd)
+            let startVal = document.getElementById('startTime').value;
+            let eindVal = document.getElementById('endTime').value;
+            if (!startVal || !eindVal) return;
+
+            let [startUur, startMin] = startVal.split(':').map(Number);
+            let [eindUur, eindMin] = eindVal.split(':').map(Number);
+
+            let currentTimeInSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+            let startSeconds = startUur * 3600 + startMin * 60;
+            let endSeconds = eindUur * 3600 + eindMin * 60;
+
+            let isTijdensDialyse = false;
+
+            if (startSeconds > endSeconds) {
+                // Loopt over middernacht heen (bijv. 22:30 tot 05:30)
+                if (currentTimeInSeconds >= startSeconds) {
+                    targetTime.setDate(targetTime.getDate() + 1);
+                    targetTime.setHours(eindUur, eindMin, 0, 0);
+                    isTijdensDialyse = true;
+                } else if (currentTimeInSeconds < endSeconds) {
+                    targetTime.setHours(eindUur, eindMin, 0, 0);
+                    isTijdensDialyse = true;
+                } else {
+                    targetTime.setHours(startUur, startMin, 0, 0);
+                    isTijdensDialyse = false;
+                }
+            } else {
+                // Binnen dezelfde dag
+                if (currentTimeInSeconds >= startSeconds && currentTimeInSeconds < endSeconds) {
+                    targetTime.setHours(eindUur, eindMin, 0, 0);
+                    isTijdensDialyse = true;
+                } else {
+                    if (currentTimeInSeconds >= endSeconds) targetTime.setDate(targetTime.getDate() + 1);
+                    targetTime.setHours(startUur, startMin, 0, 0);
+                    isTijdensDialyse = false;
+                }
+            }
+
+            let diff = targetTime - now;
+            if (diff <= 0) {
+                timerOutput.innerText = "00:00:00";
+                statusText.innerText = isTijdensDialyse ? "Dialytijd bereikt / afgelopen!" : "Tijd om te starten!";
+                return;
+            }
+
+            let label = isTijdensDialyse ? "Actieve Dialyse - Tijd tot einde:" : "Wachten op starttijd:";
+            formatteerEnToon(diff, label, timerOutput, statusText);
+        }
+
+        function formatteerEnToon(diff, label, timerOutput, statusText) {
             let diffHours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             let diffMinutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
             let diffSeconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -139,19 +266,8 @@
                 String(diffSeconds).padStart(2, '0');
 
             timerOutput.innerText = formattedTime;
-
-            if (isTijdensDialyse) {
-                statusText.innerText = "Actieve Dialyse - Tijd tot einde (05:30):";
-                timerOutput.style.color = "#03dac6"; // Cyaan/Groenachtig tijdens dialyse
-            } else {
-                statusText.innerText = "Wachten op starttijd (22:30):";
-                timerOutput.style.color = "#bb86fc"; // Paars/Lichtblauwig daarbuiten
-            }
+            statusText.innerText = label;
         }
-
-        // Update elke seconde
-        setInterval(updateCountdown, 1000);
-        updateCountdown(); // Direct uitvoeren bij laden
     </script>
 
 </body>
