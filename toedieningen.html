@@ -93,6 +93,24 @@
             border: 1px solid #ccc;
             font-size: 15px;
         }
+        .dropdown-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .small-btn {
+            padding: 6px 12px;
+            font-size: 13px;
+            border-radius: 4px;
+            cursor: pointer;
+            border: none;
+            font-weight: bold;
+        }
+        .btn-add-opt { background-color: #17a2b8; color: white; }
+        .btn-add-opt:hover { background-color: #138496; }
+        .btn-del-opt { background-color: #dc3545; color: white; }
+        .btn-del-opt:hover { background-color: #c82333; }
+
         button.main-btn {
             background-color: #28a745;
             color: white;
@@ -214,12 +232,16 @@
             </div>
         </div>
 
-        <!-- Multi-select Dropdown vanuit Google Sheet -->
+        <!-- Multi-select met toevoeg en verwijder knoppen -->
         <div class="form-group">
             <label for="multiSelectOpties">Extra items / Selectie (Multi-select: houd Ctrl ingedrukt):</label>
             <select id="multiSelectOpties" multiple>
                 <option value="" disabled>Laden vanuit Google Sheet...</option>
             </select>
+            <div class="dropdown-actions">
+                <button type="button" class="small-btn btn-add-opt" onclick="voegNieuweOptieToe()">+ Nieuwe optie toevoegen</button>
+                <button type="button" class="small-btn btn-del-opt" onclick="verwijderGeselecteerdeOptie()">🗑️ Verwijder gekozen optie</button>
+            </div>
         </div>
 
         <div class="form-group">
@@ -292,11 +314,71 @@
                         select.appendChild(opt);
                     });
                 } else {
-                    select.innerHTML = '<option value="" disabled>Geen opties gevonden in tabblad "Opties"</option>';
+                    select.innerHTML = '<option value="" disabled>Geen opties gevonden. Voeg er een toe!</option>';
                 }
             })
             .catch(err => {
                 console.error("Fout bij laden opties", err);
+            });
+        }
+
+        function voegNieuweOptieToe() {
+            let nieuweOptie = prompt("Typ de naam van de nieuwe optie die je wilt toevoegen:");
+            if (!nieuweOptie || nieuweOptie.trim() === "") return;
+            
+            nieuweOptie = nieuweOptie.trim();
+
+            // Stuur naar Google Sheet om op te slaan in het tabblad 'Opties'
+            let data = {
+                sheetName: "Opties",
+                NieuweOptie: nieuweOptie
+            };
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                alert("Optie toegevoegd!");
+                setTimeout(laadDropdownOpties, 1500); // Herlaad lijst na 1.5 sec
+            })
+            .catch(err => {
+                console.error("Fout:", err);
+                alert("Kon optie niet toevoegen.");
+            });
+        }
+
+        function verwijderGeselecteerdeOptie() {
+            let select = document.getElementById('multiSelectOpties');
+            let geselecteerd = Array.from(select.selectedOptions).map(opt => opt.value);
+            
+            if (geselecteerd.length === 0) {
+                alert("Selecteer eerst de optie(s) in de lijst die je wilt verwijderen!");
+                return;
+            }
+
+            if (!confirm("Weet je zeker dat je deze geselecteerde optie(s) wilt verwijderen uit de lijst?")) return;
+
+            let data = {
+                sheetName: "Opties",
+                VerwijderOpties: geselecteerd.join("|||")
+            };
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                alert("Optie(s) verwijderd!");
+                setTimeout(laadDropdownOpties, 1500);
+            })
+            .catch(err => {
+                console.error("Fout:", err);
+                alert("Kon optie niet verwijderen.");
             });
         }
 
@@ -306,10 +388,9 @@
             let ijzer = document.querySelector('input[name="ijzer"]:checked').value;
             let epo = document.querySelector('input[name="epo"]:checked').value;
             
-            let shuntKeuze = document.querySelector('input[name="shuntChoice"]:checked').value;
-            let shuntVal = shuntKeuze === "Ja" ? document.getElementById('shuntWaarde').value : "Nee";
+            let shuntChoice = document.querySelector('input[name="shuntChoice"]:checked').value;
+            let shuntVal = shuntChoice === "Ja" ? document.getElementById('shuntWaarde').value : "Nee";
             
-            // Haal multi-select geselecteerde waarden op
             let selectElement = document.getElementById('multiSelectOpties');
             let geselecteerd = Array.from(selectElement.selectedOptions).map(opt => opt.value).join(', ');
 
@@ -337,9 +418,7 @@
                 Opmerking: opmerking
             };
 
-            if (rowIndex) {
-                data.rowIndex = rowIndex;
-            }
+            if (rowIndex) data.rowIndex = rowIndex;
 
             alert("Bezig met opslaan...");
 
