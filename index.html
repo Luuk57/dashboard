@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Dialyse Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #0066cc;
+            text-align: center;
+            font-size: 24px;
+        }
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .menu-btn {
+            background-color: #0066cc;
+            color: white;
+            padding: 18px;
+            text-align: center;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 18px;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: background 0.2s;
+        }
+        .menu-btn:hover {
+            background-color: #004fa3;
+        }
+        .menu-btn.secondary {
+            background-color: #28a745;
+        }
+        .menu-btn.secondary:hover {
+            background-color: #218838;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Tasker Dialyse Portaal</h1>
+        <p style="text-align: center; color: #666;">Kies een module om te openen:</p>
+        
+        <div class="menu">
+            <a href="vochtmonitor.html" class="menu-btn">💧 Vocht Monitor & Invoer</a>
+            <!-- Hier kun je later makkelijk extra HTML'tjes aan toevoegen -->
+        </div>
+    </div>
+
+</body>
+</html>
