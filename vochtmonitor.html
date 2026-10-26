@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasker - Vocht Monitor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f6f9;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #0066cc;
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .result-box {
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            text-align: center;
+        }
+        /* Kleurcoderingen op basis van je wens voor UF-advies */
+        .uf-green { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .uf-orange { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+        .uf-red { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        button {
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            padding: 15px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background-color: #004fa3;
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>💧 Vocht Monitor</h2>
+        
+        <div class="form-group">
+            <label for="preWeight">Pre-gewicht (kg):</label>
+            <input type="number" step="0.1" id="preWeight" placeholder="Bijv. 112.5" oninput="berekenUF()">
+        </div>
+
+        <div class="form-group">
+            <label for="dryWeight">Droog gewicht (kg):</label>
+            <input type="number" step="0.1" id="dryWeight" value="109" oninput="berekenUF()">
+        </div>
+
+        <div id="ufResultBox" class="result-box uf-green">
+            Berekende UF advies: <span id="ufOutput">0.0</span> kg
+        </div>
+
+        <button onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
+
+        <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
+    </div>
+
+    <script>
+        // Jouw unieke Google Apps Script URL
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxudGZYXVLm1vN1Wj4BZydsJCiDnzaEBC0BedDQpkvgNfGrcAZ_vszquiO4byM29_wQ/exec";
+
+        function berekenUF() {
+            let pre = parseFloat(document.getElementById('preWeight').value) || 0;
+            let dry = parseFloat(document.getElementById('dryWeight').value) || 109;
+            
+            // Berekening: pre weight - dry weight + 0.3
+            let uf = pre > 0 ? (pre - dry + 0.3) : 0;
+            if (uf < 0) uf = 0;
+
+            let outputSpan = document.getElementById('ufOutput');
+            let box = document.getElementById('ufResultBox');
+
+            outputSpan.innerText = uf.toFixed(2);
+
+            // Kleurcodering logica: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
+            box.className = "result-box"; // reset
+            if (uf >= 4.5) {
+                box.classList.add('uf-red');
+            } else if (uf >= 4.0) {
+                box.classList.add('uf-orange');
+            } else {
+                box.classList.add('uf-green');
+            }
+        }
+
+        function dataOpslaan() {
+            let pre = document.getElementById('preWeight').value;
+            let dry = document.getElementById('dryWeight').value;
+            let uf = document.getElementById('ufOutput').innerText;
+
+            if (!pre) {
+                alert("Vul eerst het pre-gewicht in!");
+                return;
+            }
+
+            let data = {
+                DatumTijd: new Date().toLocaleString(),
+                PreGewicht: pre,
+                DroogGewicht: dry,
+                UFAdvies: uf
+            };
+
+            alert("Bezig met opslaan...");
+
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                mode: 'no-cors', // Nodig voor Apps Script om CORS-fouten te voorkomen
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(() => {
+                alert("Gegevens succesvol opgeslagen in je Google Sheet!");
+                document.getElementById('preWeight').value = "";
+                berekenUF();
+            })
+            .catch(error => {
+                console.error('Fout:', error);
+                alert("Er ging iets mis bij het opslaan.");
+            });
+        }
+    </script>
+
+</body>
+</html>
