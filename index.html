@@ -5,73 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LuukData Portaal</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #0066cc;
-            text-align: center;
-            font-size: 24px;
-        }
-        .menu {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            margin-top: 30px;
-        }
-        .menu-btn {
-            background-color: #0066cc;
-            color: white;
-            padding: 18px;
-            text-align: center;
-            border-radius: 8px;
-            text-decoration: none;
-            font-size: 18px;
-            font-weight: bold;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-            transition: background 0.2s;
-        }
-        .menu-btn:hover {
-            background-color: #004fa3;
-        }
-        .menu-btn.secondary {
-            background-color: #28a745;
-        }
-        .menu-btn.secondary:hover {
-            background-color: #218838;
-        }
-        .menu-btn.timer {
-            background-color: #6f42c1;
-        }
-        .menu-btn.timer:hover {
-            background-color: #5a32a3;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        h1 { color: #0066cc; text-align: center; font-size: 24px; }
+        .menu { display: flex; flex-direction: column; gap: 15px; margin-top: 30px; }
+        .menu-btn { background-color: #0066cc; color: white; padding: 18px; text-align: center; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.1); transition: background 0.2s; }
+        .menu-btn:hover { background-color: #004fa3; }
+        .menu-btn.secondary { background-color: #28a745; }
+        .menu-btn.secondary:hover { background-color: #218838; }
+        .menu-btn.timer { background-color: #6f42c1; }
+        .menu-btn.timer:hover { background-color: #5a32a3; }
+        .menu-btn.ritten { background-color: #176b4d; }
+        .menu-btn.ritten:hover { background-color: #11523b; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>LuukData Portaal</h1>
         <p style="text-align: center; color: #666;">Kies een module:</p>
-        
+
         <div class="menu">
             <a href="vochtmonitor.html" class="menu-btn">💧 Gewicht, Vocht & UF Monitor</a>
             <a href="toedieningen.html" class="menu-btn secondary">💊 Toedieningen</a>
-            <a href="countdown.html" class="menu-btn timer">⏱️ Dialyse Countdown (22:30 - 05:30)</a>
+            <a href="countdown.html" class="menu-btn timer">⏱️ Dialyse Countdown</a>
+            <a href="rittenlog.html" class="menu-btn ritten">🚗 Rittenlog & GPS</a>
         </div>
     </div>
-
 </body>
 </html>
