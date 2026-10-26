@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>LuukData - Rittenlog</title>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #f1f5f2; color: #20312a; font-family: Arial, sans-serif; font-size: 16px; padding-bottom: 30px; }
+        header { background: #176b4d; color: white; padding: 20px 16px; text-align: center; }
+        header h1 { margin: 0; font-size: 24px; }
+        header p { margin: 6px 0 0; opacity: .9; font-size: 14px; }
+        main { max-width: 850px; margin: auto; padding: 14px; }
+        .kaart { background: white; border-radius: 15px; padding: 16px; margin-bottom: 14px; box-shadow: 0 2px 8px #0000000d; }
+        h2 { margin: 0 0 12px; font-size: 19px; color: #176b4d; }
+        h3 { font-size: 16px; margin: 14px 0 8px; }
+        .tegels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+        button { font: inherit; cursor: pointer; border: 0; border-radius: 11px; padding: 14px 10px; min-height: 48px; font-weight: 600; }
+        .tegel { background: #edf2ef; border: 2px solid transparent; color: #20312a; overflow-wrap: anywhere; white-space: pre-line; }
+        .tegel.geselecteerd { background: #d8f2e4; border-color: #168052; color: #075b37; }
+        .primair { background: #176b4d; color: white; width: 100%; margin-top: 9px; }
+        .secundair { background: #e4ece7; color: #20312a; width: 100%; margin-top: 8px; }
+        .stop { background: #a72d2d; color: white; width: 100%; margin-top: 8px; }
+        .klein { padding: 8px 10px; min-height: 38px; font-size: 14px; }
+        input { display: block; width: 100%; padding: 12px; border: 1px solid #bdcbc2; border-radius: 9px; font-size: 16px; margin: 7px 0 10px; background: white; box-sizing: border-box; }
+        label { font-size: 14px; font-weight: 600; }
+        .rij { display: flex; gap: 8px; align-items: center; }
+        .rij input { flex: 1; min-width: 0; }
+        .status { padding: 11px; border-radius: 9px; background: #e5eee8; margin-bottom: 12px; line-height: 1.45; }
+        .status.actief { background: #d8f2e4; color: #075b37; }
+        .status.fout { background: #fde8e7; color: #8c2020; }
+        #kaart { height: 280px; border-radius: 11px; margin-top: 10px; background: #e8ece9; }
+        .rit { border: 1px solid #e1e8e3; border-radius: 10px; padding: 12px; margin: 9px 0; overflow-wrap: anywhere; }
+        .rit strong { display: block; margin-bottom: 5px; }
+        .muted { color: #617067; font-size: 14px; line-height: 1.5; }
+        .beheer { border-top: 1px solid #e1e8e3; margin-top: 14px; padding-top: 10px; }
+        .back-link { display: block; text-align: center; margin-top: 15px; color: #176b4d; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🚗 LuukData Rittenlog</h1>
+    <p>Eenvoudig je ritten & GPS registreren</p>
+</header>
+
+<main>
+    <section class="kaart">
+        <div id="melding" class="status">Bezig met laden…</div>
+
+        <h2>1. Kies je route</h2>
+        <div id="routes" class="tegels"></div>
+
+        <h2 style="margin-top:20px">2. Kies bedrijf of privé</h2>
+        <div id="bedrijven" class="tegels"></div>
+
+        <button class="primair" id="startKnop" onclick="startRit()">Start rit</button>
+        <button class="secundair" id="tussenKnop" onclick="tussenstop()" disabled>Tussenstop registreren</button>
+        <button class="stop" id="stopKnop" onclick="stopRit()" disabled>Stop rit en opslaan</button>
+
+        <p class="muted" id="ritInfo">Kies een route en bedrijf om te beginnen.</p>
+    </section>
+
+    <section class="kaart">
+        <h2>GPS-route</h2>
+        <p class="muted">Tijdens een rit worden GPS-punten opgeslagen. Geef toestemming voor locatiegebruik.</p>
+        <div id="kaart"></div>
+        <p class="muted" id="gpsInfo">GPS nog niet gestart.</p>
+        <button class="secundair" onclick="toonLaatsteRoute()">Toon route van geselecteerde rit</button>
+    </section>
+
+    <section class="kaart">
+        <h2>Rittenoverzicht</h2>
+        <button class="secundair" onclick="laadRitten()">Vernieuwen</button>
+        <div id="rittenlijst" class="muted" style="margin-top:10px">Ritten worden geladen…</div>
+    </section>
+
+    <section class="kaart">
+        <h2>Tegels beheren</h2>
+        <div class="beheer">
+            <h3>Nieuwe route</h3>
+            <label for="nieuweRoute">Naam route</label>
+            <input id="nieuweRoute" placeholder="Bijv. Huis → Ziekenhuis">
+            <label for="nieuweTijd">Standaard afspraaktijd</label>
+            <input id="nieuweTijd" type="time" value="21:30">
+            <button class="secundair" onclick="routeToevoegen()">Route toevoegen</button>
+        </div>
+
+        <div class="beheer">
+            <h3>Nieuw bedrijf of privé</h3>
+            <label for="nieuwBedrijf">Naam</label>
+            <input id="nieuwBedrijf" placeholder="Bijv. Comtax of Privé">
+            <button class="secundair" onclick="bedrijfToevoegen()">Bedrijf toevoegen</button>
+        </div>
+
+        <div class="beheer">
+            <h3>Tegel verwijderen</h3>
+            <label for="verwijderRoute">Route</label>
+            <div class="rij">
+                <input id="verwijderRoute" placeholder="Exacte routenaam">
+                <button class="klein stop" onclick="routeVerwijderen()">Verwijder</button>
+            </div>
+            <label for="verwijderBedrijf">Bedrijf of privé</label>
+            <div class="rij">
+                <input id="verwijderBedrijf" placeholder="Exacte naam">
+                <button class="klein stop" onclick="bedrijfVerwijderen()">Verwijder</button>
+            </div>
+        </div>
+    </section>
+
+    <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxudGZYXVLm1vN1Wj4BZydsJCiDnzaEBC0BedDQpkvgNfGrcAZ_vszquiO4byM29_wQ/exec";
+
+    let instellingen = { routes: [], bedrijven: [] };
+    let gekozenRoute = '';
+    let gekozenBedrijf = '';
+    let actieveRit = '';
+    let gpsWatch = null;
+    let laatsteGps = null;
+    let kaart = null;
+    let routeLijn = null;
+    let gpsMarkering = null;
+    let laatsteRitId = '';
+    let rittenCache = [];
+
+    const ACTIEVE_RIT_SLEUTEL = 'luukDataActieveRit';
+
+    function melding(tekst, fout = false) {
+        const el = document.getElementById('melding');
+        el.textContent = tekst;
+        el.className = 'status' + (fout ? ' fout' : '');
+    }
+
+    async function api(actie, data = {}) {
+        try {
+            const res = await fetch(SCRIPT_URL + "?action=" + actie, {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(data)
+            });
+            const json = await res.json();
+            if (json.status === "error") throw new Error(json.message);
+            return json.data || json;
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async function laadInstellingen() {
+        try {
+            instellingen = await api('getRitInstellingen');
+            tekenTegels();
+            melding('Klaar. Kies een route en bedrijf.');
+        } catch (e) {
+            melding('Instellingen laden mislukt: ' + e.message, true);
+        }
+    }
+
+    function maakTegel(naam, geselecteerd, klik) {
+        const knop = document.createElement('button');
+        knop.className = 'tegel' + (geselecteerd ? ' geselecteerd' : '');
+        knop.textContent = naam;
+        knop.type = 'button';
+        knop.onclick = klik;
+        return knop;
+    }
+
+    function tekenTegels() {
+        const routes = document.getElementById('routes');
+        const bedrijven = document.getElementById('bedrijven');
+        routes.replaceChildren();
+        bedrijven.replaceChildren();
+
+        instellingen.routes.forEach(route => {
+            routes.appendChild(maakTegel(
+                route.naam + (route.tijd ? '\n' + route.tijd : ''),
+                gekozenRoute === route.naam,
+                () => { gekozenRoute = route.naam; tekenTegels(); }
+            ));
+        });
+
+        instellingen.bedrijven.forEach(bedrijf => {
+            bedrijven.appendChild(maakTegel(
+                bedrijf.naam,
+                gekozenBedrijf === bedrijf.naam,
+                () => { gekozenBedrijf = bedrijf.naam; tekenTegels(); }
+            ));
+        });
+    }
+
+    async function routeToevoegen() {
+        const naam = document.getElementById('nieuweRoute').value.trim();
+        const tijd = document.getElementById('nieuweTijd').value;
+        if (!naam || !tijd) return melding('Vul de routenaam en standaardtijd in.', true);
+
+        try {
+            instellingen = await api('tegelToevoegen', { type: 'ROUTE', naam: naam, tijd: tijd });
+            document.getElementById('nieuweRoute').value = '';
+            gekozenRoute = naam;
+            tekenTegels();
+            melding('Route toegevoegd.');
+        } catch (e) { melding(e.message, true); }
+    }
+
+    async function bedrijfToevoegen() {
+        const naam = document.getElementById('nieuwBedrijf').value.trim();
+        if (!naam) return melding('Vul eerst een bedrijfsnaam in.', true);
+
+        try {
+            instellingen = await api('tegelToevoegen', { type: 'BEDRIJF', naam: naam, tijd: '' });
+            document.getElementById('nieuwBedrijf').value = '';
+            gekozenBedrijf = naam;
+            tekenTegels();
+            melding('Bedrijf toegevoegd.');
+        } catch (e) { melding(e.message, true); }
+    }
+
+    async function routeVerwijderen() {
+        const naam = document.getElementById('verwijderRoute').value.trim();
+        if (!naam) return melding('Vul de exacte routenaam in.', true);
+        if (!confirm('Route "' + naam + '" verwijderen?')) return;
+
+        try {
+            instellingen = await api('tegelVerwijderen', { type: 'ROUTE', naam: naam });
+            if (gekozenRoute === naam) gekozenRoute = '';
+            tekenTegels();
+            melding('Route verwijderd.');
+        } catch (e) { melding(e.message, true); }
+    }
+
+    async function bedrijfVerwijderen() {
+        const naam = document.getElementById('verwijderBedrijf').value.trim();
+        if (!naam) return melding('Vul de exacte naam in.', true);
+        if (!confirm('Bedrijf/privé "' + naam + '" verwijderen?')) return;
+
+        try {
+            instellingen = await api('tegelVerwijderen', { type: 'BEDRIJF', naam: naam });
+            if (gekozenBedrijf === naam) gekozenBedrijf = '';
+            tekenTegels();
+            melding('Bedrijf verwijderd.');
+        } catch (e) { melding(e.message, true); }
+    }
+
+    function gpsEenmalig() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) return reject(new Error('Browser ondersteunt geen GPS.'));
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy || 0, speed: pos.coords.speed || 0 }),
+                err => reject(new Error('GPS niet beschikbaar.')),
+                { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 }
+            );
+        });
+    }
+
+    async function startRit() {
+        if (actieveRit) return melding('Er is al een rit onderweg.', true);
+        if (!gekozenRoute || !gekozenBedrijf) return melding('Kies eerst een route en een bedrijf.', true);
+
+        const knop = document.getElementById('startKnop');
+        knop.disabled = true;
+
+        try {
+            melding('GPS-locatie ophalen…');
+            let gps = null;
+            try { gps = await gpsEenmalig(); laatsteGps = gps; } catch (e) {}
+
+            const resultaat = await api('startNieuweRit', { route: gekozenRoute, bedrijf: gekozenBedrijf, gps: gps });
+            actieveRit = resultaat.id;
+            laatsteRitId = actieveRit;
+
+            try { sessionStorage.setItem(ACTIEVE_RIT_SLEUTEL, actieveRit); } catch (e) {}
+
+            zetRitKnoppen();
+            startGpsVolgen();
+            melding('Rit gestart.');
+            document.getElementById('ritInfo').textContent = gekozenRoute + ' — ' + gekozenBedrijf;
+            await laadRitten();
+        } catch (e) {
+            melding('Starten mislukt: ' + e.message, true);
+        } finally {
+            knop.disabled = false;
+        }
+    }
+
+    function startGpsVolgen() {
+        if (!navigator.geolocation || !actieveRit) return;
+        if (gpsWatch !== null) navigator.geolocation.clearWatch(gpsWatch);
+
+        gpsWatch = navigator.geolocation.watchPosition(
+            async pos => {
+                const gps = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy || 0, speed: pos.coords.speed || 0 };
+                laatsteGps = gps;
+                document.getElementById('gpsInfo').textContent = 'GPS actief · nauwkeurigheid ±' + Math.round(gps.accuracy) + ' m';
+                werkKaartBij(gps);
+                try { await api('bewaarGpsPunt', { id: actieveRit, gps: gps }); } catch (e) {}
+            },
+            err => { document.getElementById('gpsInfo').textContent = 'GPS-melding: ' + err.message; },
+            { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 }
+        );
+    }
+
+    async function tussenstop() {
+        if (!actieveRit) return melding('Er is geen actieve rit.', true);
+        try {
+            melding('Tussenstop opslaan…');
+            let gps = laatsteGps;
+            try { gps = await gpsEenmalig(); } catch (e) {}
+            const res = await api('registreerTussenstop', { id: actieveRit, gps: gps });
+            melding('Tussenstop opgeslagen: ' + res.tijd);
+            document.getElementById('ritInfo').textContent = 'Tussenstop: ' + res.locatie;
+            await laadRitten();
+        } catch (e) { melding('Tussenstop mislukt: ' + e.message, true); }
+    }
+
+    async function stopRit() {
+        if (!actieveRit) return melding('Er is geen actieve rit.', true);
+        if (!confirm('Wil je deze rit afronden en opslaan?')) return;
+
+        const id = actieveRit;
+        try {
+            melding('Rit afronden…');
+            let gps = laatsteGps;
+            try { gps = await gpsEenmalig(); } catch (e) {}
+
+            if (gpsWatch !== null) { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }
+
+            const res = await api('stopRit', { id: id, gps: gps });
+            actieveRit = '';
+            try { sessionStorage.removeItem(ACTIEVE_RIT_SLEUTEL); } catch (e) {}
+
+            zetRitKnoppen();
+            melding('Rit opgeslagen! Afstand: ' + Number(res.afstand || 0).toFixed(2) + ' km · Duur: ' + Number(res.duur || 0) + ' min.');
+            document.getElementById('ritInfo').textContent = 'Laatste rit afgerond.';
+            await laadRitten();
+        } catch (e) { melding('Afronden mislukt: ' + e.message, true); }
+    }
+
+    function zetRitKnoppen() {
+        document.getElementById('startKnop').disabled = !!actieveRit;
+        document.getElementById('tussenKnop').disabled = !actieveRit;
+        document.getElementById('stopKnop').disabled = !actieveRit;
+    }
+
+    async function laadRitten() {
+        const lijst = document.getElementById('rittenlijst');
+        try {
+            rittenCache = await api('getRitten');
+            lijst.replaceChildren();
+
+            if (!rittenCache.length) {
+                lijst.textContent = 'Nog geen ritten geregistreerd.';
+                return;
+            }
+
+            rittenCache.forEach(rit => {
+                const kaartje = document.createElement('div');
+                kaartje.className = 'rit';
+
+                const titel = document.createElement('strong');
+                titel.textContent = rit.route + ' — ' + rit.bedrijf;
+                kaartje.appendChild(titel);
+
+                const details = document.createElement('div');
+                details.className = 'muted';
+                details.textContent =
+                    'Start: ' + (rit.start || '—') +
+                    '\nEinde: ' + (rit.einde || '—') +
+                    '\nStatus: ' + rit.status +
+                    '\nAfstand: ' + Number(rit.afstand || 0).toFixed(2) + ' km' +
+                    '\nDuur: ' + Number(rit.duur || 0) + ' min' +
+                    (rit.tussenTijd ? '\nTussenstop: ' + rit.tussenTijd : '');
+
+                details.style.whiteSpace = 'pre-line';
+                kaartje.appendChild(details);
+
+                const knoppen = document.createElement('div');
+                knoppen.className = 'rij';
+                knoppen.style.marginTop = '8px';
+
+                const kaartKnop = document.createElement('button');
+                kaartKnop.className = 'secundair klein';
+                kaartKnop.textContent = 'Kaart';
+                kaartKnop.onclick = () => toonRoute(rit.id);
+
+                const verwijderKnop = document.createElement('button');
+                verwijderKnop.className = 'stop klein';
+                verwijderKnop.textContent = 'Verwijder';
+                verwijderKnop.onclick = () => verwijderRit(rit);
+
+                knoppen.append(kaartKnop, verwijderKnop);
+                kaartje.appendChild(knoppen);
+                lijst.appendChild(kaartje);
+            });
+        } catch (e) {
+            lijst.textContent = 'Ritten laden mislukt: ' + e.message;
+        }
+    }
+
+    async function verwijderRit(rit) {
+        if (!confirm('Rit "' + rit.route + '" verwijderen?')) return;
+        try {
+            await api('verwijderRit', { id: rit.id });
+            if (actieveRit === rit.id) {
+                if (gpsWatch !== null) { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }
+                actieveRit = '';
+                try { sessionStorage.removeItem(ACTIEVE_RIT_SLEUTEL); } catch (e) {}
+                zetRitKnoppen();
+            }
+            melding('Rit verwijderd.');
+            await laadRitten();
+        } catch (e) { melding('Verwijderen mislukt: ' + e.message, true); }
+    }
+
+    function initKaart() {
+        if (kaart || !window.L) return;
+        kaart = L.map('kaart').setView([53.0, 6.9], 9);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap', maxZoom: 19 }).addTo(kaart);
+        routeLijn = L.polyline([], { color: '#176b4d', weight: 5 }).addTo(kaart);
+    }
+
+    function werkKaartBij(gps) {
+        initKaart();
+        if (!kaart || !gps) return;
+        const punt = [gps.lat, gps.lon];
+        routeLijn.addLatLng(punt);
+        if (!gpsMarkering) { gpsMarkering = L.marker(punt).addTo(kaart); }
+        else { gpsMarkering.setLatLng(punt); }
+        kaart.setView(punt, 15);
+    }
+
+    async function toonRoute(id) {
+        try {
+            initKaart();
+            const punten = await api('getRoutePunten', { id: id });
+            if (!punten.length) return melding('Geen GPS-punten opgeslagen voor deze rit.', true);
+
+            const coords = punten.map(p => [p.lat, p.lon]);
+            routeLijn.setLatLngs(coords);
+            kaart.fitBounds(routeLijn.getBounds(), { padding: [20, 20] });
+            laatsteRitId = id;
+            melding('GPS-route geladen: ' + punten.length + ' punten.');
+        } catch (e) { melding('Route laden mislukt: ' + e.message, true); }
+    }
+
+    function toonLaatsteRoute() {
+        const id = actieveRit || laatsteRitId || (rittenCache.length ? rittenCache[0].id : '');
+        if (!id) return melding('Geen rit geselecteerd.', true);
+        toonRoute(id);
+    }
+
+    window.addEventListener('load', async () => {
+        initKaart();
+        zetRitKnoppen();
+        await laadInstellingen();
+        await laadRitten();
+    });
+</script>
+
+</body>
+</html>
