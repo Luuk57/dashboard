@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tasker - Vocht Monitor</title>
+    <title>LuukData - Gewicht & UF Monitor</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -13,14 +13,15 @@
             color: #333;
         }
         .container {
-            max-width: 600px;
+            max-width: 650px;
             margin: 0 auto;
             background: white;
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
-        h2 {
+        h2, h3 {
             color: #0066cc;
             margin-top: 0;
         }
@@ -43,15 +44,15 @@
         .result-box {
             padding: 15px;
             border-radius: 8px;
-            margin-top: 20px;
+            margin-top: 15px;
             font-size: 18px;
             font-weight: bold;
             text-align: center;
         }
-        /* Kleurcoderingen op basis van je wens voor UF-advies */
         .uf-green { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .uf-orange { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
         .uf-red { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .uf-blue { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
 
         button {
             background-color: #0066cc;
@@ -75,25 +76,49 @@
             color: #666;
             text-decoration: none;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #0066cc;
+            color: white;
+        }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>💧 Vocht Monitor</h2>
+        <h2>💧 Gewicht, Vocht & UF Monitor</h2>
         
         <div class="form-group">
-            <label for="preWeight">Pre-gewicht (kg):</label>
-            <input type="number" step="0.1" id="preWeight" placeholder="Bijv. 112.5" oninput="berekenUF()">
+            <label for="dryWeight">Droog gewicht (kg):</label>
+            <input type="number" step="0.1" id="dryWeight" oninput="slaDroogGewichtOp(); berekenAlles();">
         </div>
 
         <div class="form-group">
-            <label for="dryWeight">Droog gewicht (kg):</label>
-            <input type="number" step="0.1" id="dryWeight" value="109" oninput="berekenUF()">
+            <label for="preWeight">Pre-gewicht vóór dialyse (kg):</label>
+            <input type="number" step="0.1" id="preWeight" placeholder="Bijv. 112.5" oninput="berekenAlles()">
         </div>
 
-        <div id="ufResultBox" class="result-box uf-green">
-            Berekende UF advies: <span id="ufOutput">0.0</span> kg
+        <div id="ufAdviesBox" class="result-box uf-green">
+            Berekende UF Advies: <span id="ufAdviesOutput">0.0</span> kg
+        </div>
+
+        <div class="form-group" style="margin-top: 20px;">
+            <label for="postWeight">Nagewicht ná dialyse (kg):</label>
+            <input type="number" step="0.1" id="postWeight" placeholder="Bijv. 109.2" oninput="berekenAlles()">
+        </div>
+
+        <div id="echteUfBox" class="result-box uf-blue">
+            Echte UF (Pre - Nagewicht): <span id="echteUfOutput">0.0</span> kg
         </div>
 
         <button onclick="dataOpslaan()">Opslaan naar Google Sheet</button>
@@ -101,69 +126,143 @@
         <a href="index.html" class="back-link">← Terug naar Hoofdmenu</a>
     </div>
 
+    <div class="container">
+        <h3>📊 Geschiedenis & Overzicht</h3>
+        <button onclick="laadOverzicht()" style="background-color: #28a745; margin-top: 5px; margin-bottom: 15px; padding: 10px; font-size: 14px;">Gegevens ophalen uit Google Sheet</button>
+        <div style="overflow-x: auto;">
+            <table id="overzichtTable">
+                <thead>
+                    <tr>
+                        <th>Datum/Tijd</th>
+                        <th>Droog</th>
+                        <th>Pre</th>
+                        <th>Advies</th>
+                        <th>Na</th>
+                        <th>Echte UF</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <tr><td colspan="6">Klik op de knop hierboven om overzicht te laden.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
     <script>
-        // Jouw unieke Google Apps Script URL
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxudGZYXVLm1vN1Wj4BZydsJCiDnzaEBC0BedDQpkvgNfGrcAZ_vszquiO4byM29_wQ/exec";
 
-        function berekenUF() {
+        // Laad laatst opgeslagen drooggewicht bij opstarten (standaard 109 als er niets is)
+        window.onload = function() {
+            let opgeslagenDroog = localStorage.getItem('luuk_droog_gewicht') || "109";
+            document.getElementById('dryWeight').value = opgeslagenDroog;
+            laadOverzicht(); // Laad direct het overzicht in
+        };
+
+        function slaDroogGewichtOp() {
+            let dry = document.getElementById('dryWeight').value;
+            if(dry) {
+                localStorage.setItem('luuk_droog_gewicht', dry);
+            }
+        }
+
+        function berekenAlles() {
             let pre = parseFloat(document.getElementById('preWeight').value) || 0;
             let dry = parseFloat(document.getElementById('dryWeight').value) || 109;
+            let post = parseFloat(document.getElementById('postWeight').value) || 0;
             
-            // Berekening: pre weight - dry weight + 0.3
-            let uf = pre > 0 ? (pre - dry + 0.3) : 0;
-            if (uf < 0) uf = 0;
+            // 1. UF Advies berekening: pre weight - dry weight + 0.3
+            let ufAdvies = pre > 0 ? (pre - dry + 0.3) : 0;
+            if (ufAdvies < 0) ufAdvies = 0;
 
-            let outputSpan = document.getElementById('ufOutput');
-            let box = document.getElementById('ufResultBox');
+            let adviesSpan = document.getElementById('ufAdviesOutput');
+            let adviesBox = document.getElementById('ufAdviesBox');
+            adviesSpan.innerText = ufAdvies.toFixed(2);
 
-            outputSpan.innerText = uf.toFixed(2);
-
-            // Kleurcodering logica: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
-            box.className = "result-box"; // reset
-            if (uf >= 4.5) {
-                box.classList.add('uf-red');
-            } else if (uf >= 4.0) {
-                box.classList.add('uf-orange');
+            // Kleurcodering op basis van je wens voor UF-advies: >= 4.5 rood, >= 4.0 oranje, < 4.0 groen
+            adviesBox.className = "result-box";
+            if (ufAdvies >= 4.5) {
+                adviesBox.classList.add('uf-red');
+            } else if (ufAdvies >= 4.0) {
+                adviesBox.classList.add('uf-orange');
             } else {
-                box.classList.add('uf-green');
+                adviesBox.classList.add('uf-green');
             }
+
+            // 2. Echte UF berekening: Pre-gewicht - Nagewicht
+            let echteUf = (pre > 0 && post > 0) ? (pre - post) : 0;
+            if (echteUf < 0) echteUf = 0;
+            document.getElementById('echteUfOutput').innerText = echteUf.toFixed(2);
         }
 
         function dataOpslaan() {
             let pre = document.getElementById('preWeight').value;
             let dry = document.getElementById('dryWeight').value;
-            let uf = document.getElementById('ufOutput').innerText;
+            let post = document.getElementById('postWeight').value;
+            let advies = document.getElementById('ufAdviesOutput').innerText;
+            let echteUf = document.getElementById('echteUfOutput').innerText;
 
             if (!pre) {
-                alert("Vul eerst het pre-gewicht in!");
+                alert("Vul ten minste het pre-gewicht in!");
                 return;
             }
 
             let data = {
                 DatumTijd: new Date().toLocaleString(),
-                PreGewicht: pre,
                 DroogGewicht: dry,
-                UFAdvies: uf
+                PreGewicht: pre,
+                UFAdvies: advies,
+                Nagewicht: post || "",
+                EchteUF: post ? echteUf : ""
             };
 
-            alert("Bezig met opslaan...");
+            alert("Bezig met opslaan naar Google Sheet...");
 
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors', // Nodig voor Apps Script om CORS-fouten te voorkomen
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             })
             .then(() => {
-                alert("Gegevens succesvol opgeslagen in je Google Sheet!");
+                alert("Gegevens succesvol opgeslagen!");
                 document.getElementById('preWeight').value = "";
-                berekenUF();
+                document.getElementById('postWeight').value = "";
+                berekenAlles();
+                setTimeout(laadOverzicht, 1500); // Vernieuw overzicht na 1.5 seconde
             })
             .catch(error => {
                 console.error('Fout:', error);
                 alert("Er ging iets mis bij het opslaan.");
+            });
+        }
+
+        function laadOverzicht() {
+            fetch(SCRIPT_URL + "?action=getData")
+            .then(response => response.json())
+            .then(result => {
+                if (result.status === "success" && result.data.length > 0) {
+                    let tbody = document.getElementById('tableBody');
+                    tbody.innerHTML = "";
+                    
+                    // Laatste metingen bovenaan zetten
+                    let rows = result.data.reverse();
+
+                    rows.forEach(row => {
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${row.DatumTijd || ''}</td>
+                            <td>${row.DroogGewicht || ''}</td>
+                            <td>${row.PreGewicht || ''}</td>
+                            <td>${row.UFAdvies || ''}</td>
+                            <td>${row.Nagewicht || ''}</td>
+                            <td>${row.EchteUF || ''}</td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error("Kon overzicht niet laden", err);
             });
         }
     </script>
