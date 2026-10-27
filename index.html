@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LuukData Portaal</title>
+    
+    <!-- PWA Instellingen -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0066cc">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063822.png">
+
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; color: #333; }
         .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -20,6 +26,7 @@
     </style>
 </head>
 <body>
+
     <div class="container">
         <h1>LuukData Portaal</h1>
         <p style="text-align: center; color: #666;">Kies een module:</p>
@@ -31,5 +38,16 @@
             <a href="rittenlog.html" class="menu-btn ritten">🚗 Rittenlog & GPS</a>
         </div>
     </div>
+
+    <script>
+        // Registreer Service Worker voor PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker geregistreerd', reg))
+                    .catch(err => console.error('Service Worker fout', err));
+            });
+        }
+    </script>
 </body>
 </html>
