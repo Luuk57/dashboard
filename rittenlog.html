@@ -130,8 +130,33 @@
     let gpsMarkering = null;
     let laatsteRitId = '';
     let rittenCache = [];
+    let wakeLock = null;
 
     const ACTIEVE_RIT_SLEUTEL = 'luukDataActieveRit';
+
+    async function vraagWakeLockAan() {
+        try {
+            if ('wakeLock' in navigator) {
+                wakeLock = await navigator.wakeLock.request('screen');
+            }
+        } catch (err) {
+            console.warn('Wake Lock kon niet geactiveerd worden:', err.message);
+        }
+    }
+
+    function laatWakeLockLos() {
+        if (wakeLock !== null) {
+            wakeLock.release().then(() => {
+                wakeLock = null;
+            });
+        }
+    }
+
+    document.addEventListener('visibilitychange', async () => {
+        if (wakeLock !== null && document.visibilityState === 'visible' && actieveRit) {
+            await vraagWakeLockAan();
+        }
+    });
 
     function melding(tekst, fout = false) {
         const el = document.getElementById('melding');
@@ -281,7 +306,9 @@
 
             zetRitKnoppen();
             startGpsVolgen();
-            melding('Rit gestart.');
+            await vraagWakeLockAan();
+
+            melding('Rit gestart. Scherm blijft actief voor GPS.');
             document.getElementById('ritInfo').textContent = gekozenRoute + ' — ' + gekozenBedrijf;
             await laadRitten();
         } catch (e) {
@@ -337,7 +364,9 @@
             actieveRit = '';
             try { sessionStorage.removeItem(ACTIEVE_RIT_SLEUTEL); } catch (e) {}
 
+            laatWakeLockLos();
             zetRitKnoppen();
+
             melding('Rit opgeslagen! Afstand: ' + Number(res.afstand || 0).toFixed(2) + ' km · Duur: ' + Number(res.duur || 0) + ' min.');
             document.getElementById('ritInfo').textContent = 'Laatste rit afgerond.';
             await laadRitten();
@@ -413,6 +442,7 @@
                 if (gpsWatch !== null) { navigator.geolocation.clearWatch(gpsWatch); gpsWatch = null; }
                 actieveRit = '';
                 try { sessionStorage.removeItem(ACTIEVE_RIT_SLEUTEL); } catch (e) {}
+                laatWakeLockLos();
                 zetRitKnoppen();
             }
             melding('Rit verwijderd.');
